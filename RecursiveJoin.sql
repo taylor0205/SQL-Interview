@@ -25,67 +25,40 @@ insert into Employees (employee_id, employee_name, manager_id, salary, departmen
 
 -- 使用递归完成reporting line和employee level字段的创建
 
-WITH cte
-     AS (SELECT [employee_id],
-                [employee_name],
-                [manager_id],
-                [salary],
-                [department],
-                1
-                AS
-                lvl,
-                [employee_name]
-                AS
-                    emp_lvl_1,
-                Cast(NULL AS VARCHAR(100))
-                AS
-                    emp_lvl_2,
-                Cast(NULL AS VARCHAR(100))
-                AS
-                    emp_lvl_3,
-                Cast(NULL AS VARCHAR(100))
-                AS
-                    emp_lvl_4,
-                Cast('' + Cast([employee_id] AS VARCHAR) + '|' AS VARCHAR(250))
-                    reportting_line
-         FROM   [WORKING].[dbo].[employees]
-         WHERE  [manager_id] IS NULL
-         UNION ALL
-         SELECT e.[employee_id],
-                e.[employee_name],
-                e.[manager_id],
-                e.[salary],
-                e.[department],
-                emp.lvl + 1                                                   AS
-                lvl,
-                CASE
-                  WHEN emp.lvl = 1 THEN emp.[employee_name]
-                  ELSE emp_lvl_1
-                END                                                           AS
-                emp_lvl_1,
-                CASE
-                  WHEN emp.lvl = 1 THEN e.[employee_name]
-                  ELSE emp.emp_lvl_2
-                END                                                           AS
-                emp_lvl_2,
-                CASE
-                  WHEN emp.lvl = 2 THEN e.[employee_name]
-                  ELSE emp.emp_lvl_3
-                END                                                           AS
-                emp_lvl_3,
-                CASE
-                  WHEN emp.lvl = 3 THEN e.[employee_name]
-                  ELSE emp.emp_lvl_4
-                END                                                           AS
-                emp_lvl_4,
-                Cast(emp.reportting_line + '|'
-                     + Cast(e.[employee_id] AS VARCHAR) + '' AS VARCHAR(250)) AS
-                reportting_line
-         FROM   cte emp
-                JOIN [WORKING].[dbo].[employees] e
-                  ON emp.[employee_id] = e.[manager_id])
-SELECT *
-FROM   cte 
+with emp as (	
+	SELECT 
+	   [employee_id]
+      ,[employee_name]
+      ,[manager_id]
+      ,[salary]
+      ,[department]
+	  , 1 as lvl
+	  , employee_name as lvl_1
+	  , CAST(null as varchar(100)) as lvl_2
+	  , CAST(null as varchar(100)) as lvl_3
+	  , CAST(null as varchar(100)) as lvl_4
+	  , CAST('' + cast([employee_name] as varchar)  as varchar(250)) as mgr_path
+  FROM [WORKING].[dbo].[Employees]
+  where manager_id is null
+
+  union all
+
+  	SELECT 
+	   e.[employee_id]
+      ,e.[employee_name]
+      ,e.[manager_id]
+      ,e.[salary]
+      ,e.[department]
+	  ,emp.lvl + 1 as lvl
+	  , case when emp.lvl = 1 then emp.employee_name else emp.lvl_1 end as lvl_1
+	  , case when emp.lvl = 1 then e.employee_name else emp.lvl_2 end as lv1_2
+	  , case when emp.lvl = 2 then e.employee_name else emp.lvl_3 end as lvl_3
+	  , case when emp.lvl = 3 then e.employee_name else emp.lvl_4 end as lvl_4
+	  , CAST( emp.mgr_path + ' < ' + CAST( e.employee_name as varchar) + '' as varchar(250)) as mgr_path
+	  from emp
+	  join [WORKING].[dbo].[Employees] e on emp.employee_id = e.manager_id
+)
+select * from emp
 
 
 /**
